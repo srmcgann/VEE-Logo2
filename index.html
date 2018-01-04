@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+    <title>VEE Logo Animation</title>
+    <style>
+      html,body{
+        margin:0px;
+        width:100%;
+        font-family:courier;
+        font-size:24px;
+        color:white;
+        background:#000;
+      }
+
+      #canvas{
+        position:absolute;
+        width:100%;
+        height:100%;
+        margin-right:auto;
+      }
+
+      #replayButton{
+        position:absolute;
+        top:90%;
+        left:50%;
+        transform:translate(-50%,-50%);
+        font-size:24px;
+        border-radius:10px;
+        color:#fff;
+        background:#222;
+        padding-left:20px;
+        padding-right:20px;
+      }
+    </style>
+	</head>
+	<body>
+		<canvas id=canvas></canvas>
+    <button id="replayButton">replay</button>
+		<script>
+      vid=document.createElement("video");
+      vid.src="video-sunrise-1-1280.mp4"
+      vid.loop=1;
+      vid.play();
+			c=document.getElementById("canvas");
+			x=c.getContext("2d");
+			c.width=c.clientWidth;
+			c.height=c.clientHeight;
+			S=Math.sin;
+			C=Math.cos;
+      P3D=(x,y,z)=>{return{X:cx+x/z*850*scale,Y:cy+y/z*850*scale-50,d:z>.001?z:.001}}
+      rotate=(X,Y,Z,roll,pitch,yaw)=>{
+        let d=Math.hypot(X,Y);
+        let p=Math.atan2(X,Y);
+        X=S(p+roll)*d
+        Y=C(p+roll)*d
+        d=Math.hypot(Y,Z);
+        p=Math.atan2(Y,Z);
+        Y=S(p+pitch)*d
+        Z=C(p+pitch)*d
+        d=Math.hypot(X,Z);
+        p=Math.atan2(X,Z);
+        X=S(p+yaw)*d
+        Z=C(p+yaw)*d
+        return {X,Y,Z}
+      }
+      D=()=>{
+        x.globalAlpha=.35
+        x.drawImage(vid,0,0,1280,720,0,0,c.width,c.height);
+        x.globalAlpha=1;
+        x.drawImage(logo,cx-logo.width/2+25,cy-logo.height/2+230+OY-100)
+        x.strokeStyle=`rgba(220,220,255,${.1/scale})`;
+        shapes.sort((a,b)=>b.z-a.z)
+        for(i=0;i<shapes.length;++i){
+          x.fillStyle=`hsla(${24+Math.PI*2/shapes.length*shapes[i].index/(1+mainSeq/25)},${100-95/(1+mainSeq/200)}%,55%,${Math.min(.75,frame/3000)})`;
+          for(j=0;j<shapes[i].quads.length;j++){
+            x.beginPath()
+            for(k=0;k<4;++k){
+              X=shapes[i].quads[j][k].x
+              Y=shapes[i].quads[j][k].y
+              Z=shapes[i].quads[j][k].z
+              p=rotate(X,Y,Z,shapes[i].roll,shapes[i].pitch,shapes[i].yaw)
+              p=P3D(shapes[i].x+p.X,shapes[i].y+p.Y,shapes[i].z+p.Z+800*scale)
+              x.lineTo(p.X,p.Y+OY-100)
+            }
+            x.closePath()
+            x.fill()
+            x.stroke()
+          }
+          if(frame<650){
+            if(OY<-50)OY/=1.002
+            let p=Math.PI*2/shapes.length*shapes[i].index+frame/80
+            X=S(p)*600
+            Y=-300+(OY+700)/2
+            Z=500+C(p)*700
+            shapes[i].yaw=p
+            shapes[i].xV+=(X-shapes[i].x)/200
+            shapes[i].yV+=(Y-shapes[i].y)/200
+            shapes[i].zV+=(Z-shapes[i].z)/200
+          }else{
+            mainSeq++
+            while(shapes[i].yaw>Math.PI)shapes[i].yaw-=Math.PI*2
+            while(shapes[i].yaw<-Math.PI)shapes[i].yaw+=Math.PI*2
+            while(shapes[i].pitch>Math.PI)shapes[i].pitch-=Math.PI*2
+            while(shapes[i].pitch<-Math.PI)shapes[i].pitch+=Math.PI*2
+            while(shapes[i].roll>Math.PI)shapes[i].roll-=Math.PI*2
+            while(shapes[i].roll<-Math.PI)shapes[i].roll+=Math.PI*2
+            if(scale<100)scale+=.001
+            shapes[i].rollV-=shapes[i].roll/200
+            shapes[i].pitchV-=shapes[i].pitch/200
+            shapes[i].yawV-=shapes[i].yaw/200
+            shapes[i].roll+=shapes[i].rollV
+            shapes[i].pitch+=shapes[i].pitchV
+            shapes[i].yaw+=shapes[i].yawV
+            shapes[i].rollV/=1.03
+            shapes[i].pitchV/=1.03
+            shapes[i].yawV/=1.03
+            shapes[i].xV+=(shapes[i].ox-shapes[i].x)/400
+            shapes[i].yV+=(shapes[i].oy-shapes[i].y)/400
+            shapes[i].zV+=(shapes[i].oz-shapes[i].z)/300
+          }
+          shapes[i].x+=shapes[i].xV
+          shapes[i].y+=shapes[i].yV
+          shapes[i].z+=shapes[i].zV
+          shapes[i].xV/=1.07
+          shapes[i].yV/=1.07
+          shapes[i].zV/=1.08
+        }
+        t+=1/60;
+        requestAnimationFrame(D);
+        frame++;
+      }
+
+      replayButton.addEventListener("click",()=>{
+        init();
+      });
+
+
+      window.addEventListener("resize",()=>{
+        c.width=c.clientWidth;
+        c.height=c.clientHeight;
+        cx=c.width/2
+        cy=c.height/2
+      })
+
+      logo=new Image();
+      logo.src="logo.png";
+      logo.addEventListener("load",()=>{ 
+        init()
+        t=0
+        D()
+      });
+
+      sound=new Audio("Whitehot Robot - robot en route.mp3")
+      sound.volume=.35
+      sound.loop=1
+      sound.play()
+      init=()=>{
+        mainSeq=vid.currentTime=frame=0
+        OY=-800
+        scale=.6
+        s=[[{x:0,y:0},{x:42,y:0},{x:42,y:249},{x:0,y:249}],[{x:72,y:57},{x:113,y:57},{x:113,y:200},{x:72,y:200}],[{x:143,y:57},{x:184,y:57},{x:184,y:131},{x:143,y:131}],[{x:214,y:0},{x:256,y:0},{x:256,y:249},{x:214,y:249}],[{x:72,y:232},{x:113,y:232},{x:113,y:306},{x:72,y:306}],[{x:143,y:163},{x:184,y:163},{x:184,y:306},{x:143,y:306}]]
+
+        shapes = []
+        thick=42
+        for(i=0;i<6;++i){
+          shape={}
+          shape.pitch=-Math.PI*3+Math.random()*Math.PI*6
+          shape.roll=-Math.PI*2+Math.random()*Math.PI*4
+          shape.yaw=-Math.PI*2+Math.random()*Math.PI*4
+          shape.pitchV=0
+          shape.rollV=0
+          shape.yawV=0
+          shape.quads=[]
+          quad = []
+          for(j=0;j<4;++j)quad.push({x:s[i][j].x,y:s[i][j].y,z:-thick/2})
+          shape.quads.push(quad)
+          quad = []
+          for(j=0;j<4;++j)quad.push({x:s[i][j].x,y:s[i][j].y,z:thick/2})
+          shape.quads.push(quad)
+          for(j=0;j<4;++j){
+            quad = []
+            v=j<3?j+1:0
+            quad.push({x:s[i][j].x,y:s[i][j].y,z:thick/2})
+            quad.push({x:s[i][v].x,y:s[i][v].y,z:thick/2})
+            quad.push({x:s[i][v].x,y:s[i][v].y,z:-thick/2})
+            quad.push({x:s[i][j].x,y:s[i][j].y,z:-thick/2})
+            shape.quads.push(quad)
+          }
+          shapes.push(shape)
+          X=Y=Z=0
+          for(j=0;j<shapes[i].quads.length;++j){
+            for(k=0;k<4;++k){
+              X+=shapes[i].quads[j][k].x
+              Y+=shapes[i].quads[j][k].y
+              Z+=shapes[i].quads[j][k].z
+            }
+          }
+          shapes[i].x=X/24
+          shapes[i].y=Y/24
+          shapes[i].z=Z/24
+          for(j=0;j<shapes[i].quads.length;++j){
+            for(k=0;k<4;++k){
+              shapes[i].quads[j][k].x-=shapes[i].x
+              shapes[i].quads[j][k].y-=shapes[i].y
+              shapes[i].quads[j][k].z-=shapes[i].z
+            }
+          }
+        }
+        X=Y=Z=0
+        for(i=0;i<shapes.length;++i){
+          X+=shapes[i].x
+          Y+=shapes[i].y
+          Z+=shapes[i].z
+        }
+        X/=6
+        Y/=6
+        Z/=6
+        for(i=0;i<shapes.length;++i){
+          shapes[i].ox=shapes[i].x-X
+          shapes[i].oy=shapes[i].y-Y
+          shapes[i].oz=shapes[i].z-Z
+          /*
+          shapes[i].x=-2500+Math.random()*5000
+          shapes[i].y=-2500+Math.random()*5000
+          shapes[i].z=200+Math.random()*5000
+          */
+          let p=Math.PI*2/shapes.length*i+frame/100
+          shapes[i].x=S(p)*700
+          shapes[i].y=0
+          shapes[i].z=500+C(p)*700
+          shapes[i].xV=shapes[i].yV=shapes[i].zV=0
+          shapes[i].index=i
+        }
+        cx=c.width/2
+        cy=c.height/2
+      }
+    </script>
+	</body>
+</html>
