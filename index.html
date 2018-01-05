@@ -31,6 +31,7 @@
         background:#222;
         padding-left:20px;
         padding-right:20px;
+        display:none;
       }
     </style>
 	</head>
@@ -38,9 +39,14 @@
 		<canvas id=canvas></canvas>
     <button id="replayButton">replay</button>
 		<script>
+
+
+
+
       vid=document.createElement("video");
       vid.src="video-sunrise-1-1280.mp4"
       vid.loop=1;
+      vid.muted=1;
       vid.play();
 			c=document.getElementById("canvas");
 			x=c.getContext("2d");
@@ -145,17 +151,20 @@
 
       logo=new Image();
       logo.src="logo.png";
-      logo.addEventListener("load",()=>{ 
+      vid.addEventListener("loadeddata",()=>{ 
         init()
         t=0
         D()
       });
 
+      /*
       sound=new Audio("Whitehot Robot - robot en route.mp3")
       sound.volume=.35
       sound.loop=1
       sound.play()
+      */
       init=()=>{
+        replayButton.style.display="block";
         mainSeq=vid.currentTime=frame=0
         OY=-800
         scale=.6
@@ -220,11 +229,6 @@
           shapes[i].ox=shapes[i].x-X
           shapes[i].oy=shapes[i].y-Y
           shapes[i].oz=shapes[i].z-Z
-          /*
-          shapes[i].x=-2500+Math.random()*5000
-          shapes[i].y=-2500+Math.random()*5000
-          shapes[i].z=200+Math.random()*5000
-          */
           let p=Math.PI*2/shapes.length*i+frame/100
           shapes[i].x=S(p)*700
           shapes[i].y=0
