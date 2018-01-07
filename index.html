@@ -47,6 +47,7 @@
       vid.src="video-sunrise-1-1280.mp4"
       vid.loop=1;
       vid.muted=1;
+      vid.autoPlay=true;
       vid.play();
 			c=document.getElementById("canvas");
 			x=c.getContext("2d");
@@ -54,10 +55,10 @@
 			c.height=c.clientHeight;
 			S=Math.sin;
 			C=Math.cos;
-      P3D=(x,y,z)=>{return{X:cx+x/z*850*scale,Y:cy+y/z*850*scale-50,d:z>.001?z:.001}}
-      rotate=(X,Y,Z,roll,pitch,yaw)=>{
-        let d=Math.hypot(X,Y);
-        let p=Math.atan2(X,Y);
+      function P3D(x,y,z){return{X:cx+x/z*850*scale,Y:cy+y/z*850*scale-50,d:z>.001?z:.001}}
+      function rotate(X,Y,Z,roll,pitch,yaw){
+        var d=Math.hypot(X,Y);
+        var p=Math.atan2(X,Y);
         X=S(p+roll)*d
         Y=C(p+roll)*d
         d=Math.hypot(Y,Z);
@@ -70,13 +71,18 @@
         Z=C(p+yaw)*d
         return {X,Y,Z}
       }
-      D=()=>{
+      function D(){
         x.globalAlpha=.35
-        x.drawImage(vid,0,0,1280,720,0,0,c.width,c.height);
+        if(iOS){
+          x.drawImage(sunrise,0,0,c.width,c.height);
+        }else{
+          x.drawImage(vid,0,0,1280,720,0,0,c.width,c.height);
+        }
         x.globalAlpha=1;
         x.drawImage(logo,cx-logo.width/2+25,cy-logo.height/2+230+OY-100)
+        requestAnimationFrame(D);
         x.strokeStyle=`rgba(220,220,255,${.1/scale})`;
-        shapes.sort((a,b)=>b.z-a.z)
+        shapes.sort(function(a,b){b.z-a.z})
         for(i=0;i<shapes.length;++i){
           x.fillStyle=`hsla(${24+Math.PI*2/shapes.length*shapes[i].index/(1+mainSeq/25)},${100-95/(1+mainSeq/200)}%,55%,${Math.min(.75,frame/3000)})`;
           for(j=0;j<shapes[i].quads.length;j++){
@@ -95,7 +101,7 @@
           }
           if(frame<650){
             if(OY<-50)OY/=1.002
-            let p=Math.PI*2/shapes.length*shapes[i].index+frame/80
+            var p=Math.PI*2/shapes.length*shapes[i].index+frame/80
             X=S(p)*600
             Y=-300+(OY+700)/2
             Z=500+C(p)*700
@@ -133,16 +139,15 @@
           shapes[i].zV/=1.08
         }
         t+=1/60;
-        requestAnimationFrame(D);
         frame++;
       }
 
-      replayButton.addEventListener("click",()=>{
+      replayButton.addEventListener("click",function(){
         init();
       });
 
 
-      window.addEventListener("resize",()=>{
+      window.addEventListener("resize",function(){
         c.width=c.clientWidth;
         c.height=c.clientHeight;
         cx=c.width/2
@@ -151,11 +156,23 @@
 
       logo=new Image();
       logo.src="logo.png";
-      vid.addEventListener("loadeddata",()=>{ 
-        init()
-        t=0
-        D()
-      });
+      iOS=0
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent)){
+        iOS=1
+        sunrise = new Image()
+        sunrise.src = 'sunrise.png'
+        sunrise.addEventListener("load",function(){
+          init()
+          t=0
+          D()
+        });
+      }else{
+        vid.addEventListener("loadeddata",function(){ 
+          init()
+          t=0
+          D()
+        });
+      }
 
       /*
       sound=new Audio("Whitehot Robot - robot en route.mp3")
@@ -163,7 +180,7 @@
       sound.loop=1
       sound.play()
       */
-      init=()=>{
+      function init(){
         replayButton.style.display="block";
         mainSeq=vid.currentTime=frame=0
         OY=-800
@@ -229,7 +246,7 @@
           shapes[i].ox=shapes[i].x-X
           shapes[i].oy=shapes[i].y-Y
           shapes[i].oz=shapes[i].z-Z
-          let p=Math.PI*2/shapes.length*i+frame/100
+          var p=Math.PI*2/shapes.length*i+frame/100
           shapes[i].x=S(p)*700
           shapes[i].y=0
           shapes[i].z=500+C(p)*700
